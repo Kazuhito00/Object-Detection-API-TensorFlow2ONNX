@@ -14,7 +14,7 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--device", type=int, default=0)
-    parser.add_argument("--file", type=str, default=None)
+    parser.add_argument("--movie", type=str, default=None)
     parser.add_argument("--width", help='cap width', type=int, default=960)
     parser.add_argument("--height", help='cap height', type=int, default=540)
 
@@ -25,7 +25,7 @@ def get_args():
         type=str,
         default='512,512',
     )
-    parser.add_argument("--score_th", type=float, default=0.6)
+    parser.add_argument("--score_th", type=float, default=0.5)
 
     args = parser.parse_args()
 
@@ -43,8 +43,8 @@ def main():
     input_shape = [int(i) for i in args.input_size.split(',')]
     score_th = args.score_th
 
-    if args.file is not None:
-        cap_device = args.file
+    if args.movie is not None:
+        cap_device = args.movie
 
     # カメラ準備 ###############################################################
     cap = cv.VideoCapture(cap_device)
@@ -56,6 +56,10 @@ def main():
         model_path,
         providers=['CPUExecutionProvider'],
     )
+
+    # COCOクラスリスト読み込み
+    with open('coco_classes.txt', 'rt') as f:
+        coco_classes = f.read().rstrip('\n').split('\n')
 
     while True:
         start_time = time.time()
@@ -99,10 +103,11 @@ def main():
             x1, y1 = int(bbox[1] * frame_width), int(bbox[0] * frame_height)
             x2, y2 = int(bbox[3] * frame_width), int(bbox[2] * frame_height)
 
-            cv.putText(debug_image,
-                       'ID:' + str(class_id) + '({:.3f})'.format(score),
-                       (x1, y1 - 15), cv.FONT_HERSHEY_SIMPLEX, 0.6,
-                       (0, 255, 0), 2, cv.LINE_AA)
+            cv.putText(
+                debug_image,
+                str(coco_classes[int(class_id - 1)]) +
+                '({:.3f})'.format(score), (x1, y1 - 15),
+                cv.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv.LINE_AA)
             cv.rectangle(debug_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
         cv.putText(
